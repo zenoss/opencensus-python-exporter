@@ -16,7 +16,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="opencensus-ext-zenoss",
-    version="0.0.1",
+    version="0.0.2",
     author="Zenoss, Inc.",
     author_email="dev@zenoss.com",
     classifiers=[

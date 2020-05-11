@@ -25,7 +25,7 @@ from opencensus.metrics.export import metric_descriptor
 from opencensus.stats import stats
 
 DEFAULT_ADDRESS = "https://api.zenoss.io"
-DEFAULT_PERIOD = 60000
+DEFAULT_INTERVAL = 60
 DEFAULT_SOURCE_TYPE = "zenoss/opencensus-python-exporter"
 API_KEY_FIELD = "zenoss-api-key"
 SOURCE_FIELD = "source"
@@ -91,7 +91,7 @@ class ZenossStatsExporter(object):
             for ts in metric.time_series:
                 tags = {}
                 for k, v in zip(descriptor.label_keys, ts.label_values):
-                    tags[k] = v
+                    tags[k.key] = v.value
 
                 if descriptor.description:
                     tags[DESCRIPTION_FIELD] = descriptor.description
@@ -165,10 +165,10 @@ class ZenossStatsExporter(object):
             self.logger.error("failed to send metrics: %s", e)
 
 
-def new_stats_exporter(options=None, period=DEFAULT_PERIOD):
+def new_stats_exporter(options=None, interval=DEFAULT_INTERVAL):
     """Return a stats exporter and running transport thread."""
     exporter = ZenossStatsExporter(options=options)
-    transport.get_exporter_thread([stats.stats], exporter, interval=period)
+    transport.get_exporter_thread([stats.stats], exporter, interval=interval)
     return exporter
 
 
