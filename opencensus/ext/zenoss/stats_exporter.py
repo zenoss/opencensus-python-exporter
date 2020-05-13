@@ -154,6 +154,7 @@ class ZenossStatsExporter(object):
         try:
             r = requests.post(
                 metrics_url,
+                headers=headers,
                 verify=not self.options.insecure_tls,
                 data=json.dumps({"taggedMetrics": tagged_metrics}))
 

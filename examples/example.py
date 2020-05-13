@@ -79,4 +79,12 @@ def main():
 
 
 if __name__ == "__main__":
+    import logging
+
+    # Setup default logging configuration.
+    logging.basicConfig()
+
+    # Change level of Zenoss exporter's logging to debug.
+    logging.getLogger("opencensus.ext.zenoss").setLevel(logging.DEBUG)
+
     main()
