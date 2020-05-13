@@ -94,7 +94,7 @@ def main():
             address=address,
             api_key=api_key,
             source="app.example.com"),
-        period=10)
+        interval=10)
 
     # Register Zenoss exporter.
     view_manager.register_exporter(exporter)
