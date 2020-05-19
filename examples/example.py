@@ -69,10 +69,10 @@ def main():
     tag_map = tag_map_module.TagMap()
 
     # Record one random measurement each second for 100 seconds.
-    print("Recording measurements:")
-    for i in range(100):
+    print("Recording measurements (CTRL-C to stop):")
+    while True:
         ms = random.random() * 5 * 1000
-        print("  - latency {}:{}".format(i, ms))
+        print("  - latency {}".format(ms))
         measurement_map.measure_float_put(m_latency_ms, ms)
         measurement_map.record(tag_map)
         time.sleep(1)

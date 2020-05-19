@@ -33,7 +33,7 @@ SOURCE_TYPE_FIELD = "source-type"
 DESCRIPTION_FIELD = "description"
 UNITS_FIELD = "units"
 
-EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 
 class Options(object):
@@ -77,7 +77,7 @@ class ZenossStatsExporter(object):
         def add_metric(name, timestamp, value, tags):
             tagged_metrics.append({
                 "metric": name,
-                "timestamp": int(datetime_timestamp(timestamp or now) * 1000),
+                "timestamp": datetime_millis(timestamp or now),
                 "value": value,
                 "tags": tags,
             })
@@ -173,16 +173,6 @@ def new_stats_exporter(options=None, interval=DEFAULT_INTERVAL):
     return exporter
 
 
-def datetime_timestamp(dt):
-    """Return POSIX timestamp as float.
-
-    This is essentially Python 3.3's datetime.timestamp() function. I've
-    moved it here for Python 2 compatibility.
-
-    """
-    if dt.tzinfo is None:
-        return time.mktime(
-            (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, -1, -1, -1)
-        ) + dt.microsecond / 1e6
-    else:
-        return (dt - EPOCH).total_seconds()
+def datetime_millis(dt):
+    """Return POSIX timestamp in milliseconds as int."""
+    return int((dt - EPOCH).total_seconds() * 1000)
