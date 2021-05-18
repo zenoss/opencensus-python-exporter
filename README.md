@@ -32,7 +32,7 @@ exporter = zenoss.new_stats_exporter(
 view_manager.register_exporter(exporter)
 ```
 
-## Options
+### Options
 
 The following options are available when creating a stats exporter.
 
@@ -42,8 +42,111 @@ The following options are available when creating a stats exporter.
 * `extra_tags`: Map of additional tags to add to all sent metrics. Default is {}.
 * `insecure_tls`: Set to True to disable server certification verification. Default is False.
 
-Example Application
--------------------
+### Tags
+
+The tags associated with exported metrics are very important in determining how
+the metrics will be handled by Zenoss. Without adding appropriate tags to the
+metrics, and creating corresponding Zenoss policy, you will not be able to see
+the metrics in Zenoss.
+
+The metrics sent via the Zenoss exporter by default will have only the explicit
+tags added via the OpenCensus view and record APIs, and a _source-type_ tag
+equal to "zenoss/opencensus-python-exporter". You should also typically specify
+the _source_ argument when creating the Zenoss exporter to also add a _source_
+tag to all exported metrics. This enables you to add your source to Zenoss
+dashboard scopes.
+
+For the simplest case where you want all the metrics sent by your app to be
+associated with a single entity in Zenoss, you don't need to specify any
+additional tags in _extra_tags_. You must just choose a value for the _source_
+tag that uniquely identifies the Zenoss entity you want the metrics to be
+associated with. For example, "app.example.com".
+
+### Zenoss Policy
+
+Assuming your metrics are being sent to Zenoss with the _source_ and
+_source-type_ tags setup as described above, you will need to create Zenoss
+policy to control which tags become metric dimensions, and the dimensions for
+the entity that will be created for the metrics.
+
+First you need to create a metric ingest policy that controls which tags will
+be dimensions, and which will be metadata. This metric ingest policy will also
+be used to automatically create entities (via models) with which the metrics
+will be associated.
+
+```shell script
+cat << EOF | curl https://api.zenoss.io/v1/policy/custom/ingests \
+    -H "zenoss-api-key: YOUR-API-KEY" -X POST -s -d @-
+{
+    "name": "metricIngest_opencensus",
+    "requiredKeys": ["source", "source-type"],
+    "dimensionKeys": ["source"],
+    "metadataKeys": ["source-type"],
+    "useAllKeysAsDims": false,
+    "excludeInternalFromAllKeysAsDims": true,
+    "generateEntityId": true,
+    "entityDimensionKeys": ["source"],
+    "contributeModelInfo": true
+}
+EOF
+```
+
+You will next need a model ingest policy to handle the generated model generated
+by the metric ingest policy. Note that we're copying the value of the _source_
+tag into the _name_ metadata field. This _name_ field gives our entity its name.
+
+```shell script
+cat << EOF | curl https://api.zenoss.io/v1/policy/custom/ingests \
+    -H "zenoss-api-key: YOUR-API-KEY" -X POST -s -d @-
+{
+    "name": "modelIngest_opencensus",
+    "requiredKeys": ["source", "source-type"],
+    "fieldTransforms": [
+        {
+            "operation": "COPY",
+            "sourceKey": "source",
+            "targetKey": "name"
+        }
+    ],
+    "dimensionKeys": ["source"],
+    "metadataKeys": ["source-type", "name"],
+    "useAllKeysAsDims": false,
+    "excludeInternalFromAllKeysAsDims": true,
+    "generateEntityId": true,
+    "entityDimensionKeys": ["source"]
+}
+EOF
+```
+
+Lastly we must create a datasource that applies the previous two policies to
+all data with a _source-type_ of "zenoss/opencensus-python-exporter".
+
+```shell script
+cat << EOF | curl https://api.zenoss.io/v1/policy/custom/datasources \
+    -H "zenoss-api-key: YOUR-API-KEY" -X POST -s -d @-
+{
+    "sourceType": "zenoss/opencensus-python-exporter",
+    "policyReferences": [
+        {
+            "dataType": "METRIC",
+            "policyType": "INGEST",
+            "policyName": "metricIngest_opencensus"
+        },
+        {
+            "dataType": "DATAMAP",
+            "policyType": "INGEST",
+            "policyName": "modelIngest_opencensus"
+        }
+    ]
+}
+EOF
+```
+
+Note that you can override the value of the _source-type_ tag by supplying it
+in the _extra_tags_ argument when creating the Zenoss exporter. This would allow
+you to define a separate datasource with different policies.
+
+### Example Application
 
 The following is a complete example of an application that will write to a
 measure once per second for 100 seconds. A distribution view is created for
